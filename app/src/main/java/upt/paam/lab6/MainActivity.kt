@@ -3,38 +3,34 @@ package upt.paam.lab6
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Location
-import com.google.android.gms.location.LocationCallback
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.core.app.ActivityCompat
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.tasks.OnFailureListener
-import android.provider.Settings
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.maps.android.compose.GoogleMap
@@ -77,9 +73,13 @@ class MainActivity : ComponentActivity() {
                     ) {
                         LocationComposable()
                     }
-                    // TODO 2: Add a button to call getCurrentLocation for retrieving current location
+                    Button(
+                        onClick = @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION]) { getCurrentLocation() },
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Text(text = "Get Current Location")
+                    }
                 }
-
             }
         }
     }
@@ -113,7 +113,6 @@ class MainActivity : ComponentActivity() {
                 title = "One Marker"
             )
         }
-        // TODO 1: Create a marker and set its position from [latLngState].
     }
 
     override fun onResume() {
@@ -135,6 +134,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     private fun getCurrentLocation() {
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         if (isLocationPermissionGranted) {
@@ -148,7 +148,18 @@ class MainActivity : ComponentActivity() {
             ) {
                 return
             }
-            // TODO 3 Add a fusedLocationClient function to retrieve the current location and set the marker to point to that location
+            val cancellationTokenSource = CancellationTokenSource()
+            fusedLocationClient.getCurrentLocation(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                cancellationTokenSource.token
+            ).addOnSuccessListener { location: Location? ->
+                location?.let {
+                    latLngState.value = LatLng(it.latitude, it.longitude)
+                }
+            }.addOnFailureListener { exception ->
+                // Handle failure - you could show a toast or log the error
+                exception.printStackTrace()
+            }
         }
     }
 
